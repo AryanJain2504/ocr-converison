@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF OCR Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 15px;
+            color: #667eea;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .options {
+            margin-bottom: 25px;
+        }
+
+        .option-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .hint {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            margin-top: 15px;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(17, 153, 142, 0.4);
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+            display: block;
+        }
+
+        .status.success {
+            background: #efe;
+            color: #3a3;
+            border: 1px solid #cfc;
+            display: block;
+        }
+
+        .status.processing {
+            background: #fef3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            display: block;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 PDF OCR Converter</h1>
+        <p class="subtitle">Upload a PDF and extract text using OCR</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <p><strong>Click to upload</strong> or drag and drop</p>
+            <p style="font-size: 0.9em; color: #999; margin-top: 5px;">PDF files only (max 50MB)</p>
+            <input type="file" id="fileInput" class="file-input" accept=".pdf">
+            <div class="file-name" id="fileName"></div>
+        </div>
+
+        <div class="options">
+            <div class="option-group">
+                <label for="language">OCR Language:</label>
+                <select id="language">
+                    <option value="hin">Hindi (हिन्दी)</option>
+                    <option value="eng">English</option>
+                    <option value="hin+eng">Hindi + English</option>
+                </select>
+            </div>
+
+            <div class="option-group">
+                <label for="maxPages">Maximum Pages (optional):</label>
+                <input type="number" id="maxPages" placeholder="Leave empty for all pages" min="1">
+                <div class="hint">Limit processing to first N pages for testing</div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="uploadBtn" disabled>
+            Convert to Text
+        </button>
+
+        <div class="loader" id="loader"></div>
+        
+        <div class="status" id="status"></div>
+
+        <div class="result-section" id="resultSection">
+            <h3 style="margin-bottom: 15px; color: #333;">✅ Conversion Complete!</h3>
+            <button class="btn btn-success" id="downloadBtn">
+                Download Text File
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const loader = document.getElementById('loader');
+        const status = document.getElementById('status');
+        const resultSection = document.getElementById('resultSection');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        let selectedFile = null;
+        let fileId = null;
+        let downloadFilename = null;
+
+        // Click to upload
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // File selection
+        fileInput.addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                showStatus('Please select a PDF file', 'error');
+                return;
+            }
+
+            if (file.size > 50 * 1024 * 1024) {
+                showStatus('File size exceeds 50MB limit', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = `Selected: ${file.name}`;
+            uploadBtn.disabled = false;
+            resultSection.classList.remove('show');
+            status.style.display = 'none';
+        }
+
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('language', document.getElementById('language').value);
+            
+            const maxPages = document.getElementById('maxPages').value;
+            if (maxPages) {
+                formData.append('max_pages', maxPages);
+            }
+
+            uploadBtn.disabled = true;
+            loader.style.display = 'block';
+            showStatus('Processing PDF... This may take a few minutes', 'processing');
+            resultSection.classList.remove('show');
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    fileId = data.file_id;
+                    downloadFilename = data.download_filename;
+                    showStatus(data.message, 'success');
+                    resultSection.classList.add('show');
+                } else {
+                    showStatus(data.error || 'Upload failed', 'error');
+                    uploadBtn.disabled = false;
+                }
+            } catch (error) {
+                showStatus('Network error: ' + error.message, 'error');
+                uploadBtn.disabled = false;
+            } finally {
+                loader.style.display = 'none';
+            }
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            if (downloadFilename) {
+                window.location.href = `/download/${downloadFilename}`;
+                
+                // Optional: Clean up files after download
+                setTimeout(() => {
+                    if (fileId) {
+                        fetch(`/cleanup/${fileId}`);
+                    }
+                }, 2000);
+            }
+        });
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
